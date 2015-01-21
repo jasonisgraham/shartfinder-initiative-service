@@ -1,0 +1,8 @@
+* subscribe for "EncounterCreated"
+** its payload is "{GMCombatants : {"goblin1", ...}, PlayerCombatants : { p1, p2, ...}}"
+** InitiativeService gets player initiative from PlayerService
+* needs json, redis/carmine
+* redis creds:
+** pub-redis-18240.us-east-1-3.1.ec2.garantiadata.com
+** port: 18240
+** passwd: "abc123"
