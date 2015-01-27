@@ -17,10 +17,12 @@
 (defn get-players-from-json [content-json]
   (concat (content-json "gmCombatants") (content-json "playerCombatants")))
 
+;; "{\"id\":6,\"name\":\"Goblin encounter\",\"gmCombatants\":[\"goblin1\",\"goblin2\",\"ogre\"],\"playerCombatants\":[\"tom\",\"jason\"]}"
 ;; {"id":6,"name":"Goblin encounter","gmCombatants":["goblin1","goblin2","ogre"],"playerCombatants":["tom","jason"]}
 (defn create-initiative
   "This function is balls ugly and when I learn clojure better, hoping to pretty it up
-   TODO this does not resolve collision with same dice num.  thinking of shuffling val set by keys 1-20"
+  FIXME in the event of a collision, players are lost
+  TODO this does not resolve collision with same dice num.  thinking of shuffling val set by keys 1-20"
   ([content-json]
    (let [players (get-players-from-json content-json)
          dice-outcomes (take (count players) (repeatedly #(dice-roller/roll-dice nil)))]

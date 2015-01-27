@@ -26,15 +26,18 @@
   (is (= (non-threaded) (non-threaded-no-let)))
   (is (= (non-threaded) (threaded))))
 
-(def this-content-json (json/read-str "{\"id\":6,\"name\":\"Goblin encounter\",\"gmCombatants\":[\"goblin1\",\"goblin2\",\"ogre\"],\"playerCombatants\":[\"tom\",\"jason\"]}"))
+
+(def this-content-json
+  (json/read-str
+   "{\"id\":6,\"name\":\"Goblin encounter\",\"gmCombatants\":[\"goblin1\",\"goblin2\",\"ogre\"],\"playerCombatants\":[\"tom\",\"jason\"]}"))
 
 (deftest test-create-initiative-no-collisions
   (let [dice-outcomes [1 2 3 4 5]]
     (is (= ["jason" "tom" "ogre" "goblin2" "goblin1"] (create-initiative this-content-json dice-outcomes)))))
 
-;; (deftest test-create-initiative-with-collisions
-;;   (let [dice-outcomes [1 4 4 4 5]]
-;;     (is (= (sort ["jason" "tom" "ogre" "goblin2" "goblin1"]) (sort (create-initiative content-json dice-outcomes))))))
+(deftest test-create-initiative-with-collisions
+  (let [dice-outcomes [1 4 4 4 5]]
+    (is (= (sort ["jason" "tom" "ogre" "goblin2" "goblin1"]) (create-initiative this-content-json dice-outcomes)))))
 
 (deftest test-get-players-from-json
   (is (= ["goblin1" "goblin2" "ogre" "tom" "jason"] (get-players-from-json this-content-json))))
