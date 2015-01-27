@@ -7,5 +7,6 @@
                  [com.taoensso/carmine "2.9.0"]
                  [org.clojure/data.json "0.2.5"]]
   :main ^:skip-aot shartfinder-initiative-service.core
+  :uberjar-name "shartfinder-initiative-service-standalone.jar"
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
