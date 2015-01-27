@@ -36,8 +36,10 @@
     (is (= ["jason" "tom" "ogre" "goblin2" "goblin1"] (create-initiative this-content-json dice-outcomes)))))
 
 (deftest test-create-initiative-with-collisions
-  (let [dice-outcomes [1 4 4 4 5]]
-    (is (= (sort ["jason" "tom" "ogre" "goblin2" "goblin1"]) (create-initiative this-content-json dice-outcomes)))))
+  (let [dice-outcomes [1 4 4 4 5]
+        actual-initiative (create-initiative this-content-json dice-outcomes)]
+    (is (= "jason" (actual-initiative 0)))
+    (is (= "goblin1" (actual-initiative 4)))))
 
 (deftest test-get-players-from-json
   (is (= ["goblin1" "goblin2" "ogre" "tom" "jason"] (get-players-from-json this-content-json))))
