@@ -27,6 +27,7 @@
     (is (= 9 (get-initiative "jason" 7)))))
 
 (deftest test-process-single-initiative
+  (reset! combatants-received #{"jason" "dogman"})
   (with-redefs [combatant-service/get-initiative-bonus (fn [id] -2)]
     (let [char-1-json-string "{\"type\":\"RollInitiative\",\"id\":\"2b29f919-6574-4709-8afb-ca54c36fa4da\",\"playerId\":\"jason\",\"diceRoll\":13}"
           char-2-json-string "{\"type\":\"RollInitiative\",\"id\":\"2b29f919-6574-4709-8afb-ca54c36fa4da\",\"playerId\":\"dogman\",\"diceRoll\":9}"]
@@ -36,7 +37,7 @@
       (is (= {"jason" 11, "dogman" 7} @combatants-rolled)))))
 
 (deftest test-process-single-combatant-one-roll-one-character
-  (reset! combatants-received ["jason"])
+  (reset! combatants-received #{"jason"})
   (with-redefs [combatant-service/get-initiative-bonus (fn [id] -2)]
     (is (= {"jason" 11}
            (process-single-initiative
@@ -105,14 +106,27 @@
     (initialize-received-combatants "{\"gmCombatants\":[\"jason\"],\"playerCombatants\":[\"fartman\"], \"combatants\":[\"dogman\"]}")
     (is (= #{"jason" "dogman" "fartman"} (set @combatants-received)))))
 
-;; (deftest test-that-only-first-roll-counts
-;;   (reset! combatants-received #{})
-;;   (initialize-received-combatants "{\"gmCombatants\":[\"jason\"],\"playerCombatants\":[\"fartman\"], \"combatants\":[\"dogman\"]}")
+(deftest test-that-only-first-roll-counts
+  (reset! combatants-received #{})
 
-  ;; (is (= true nil)))
+  (initialize-received-combatants "{\"combatants\":[\"dogman\", \"fartman\"]}")
+  (is (= 2 (count @combatants-received)))
+  (is (= nil (@combatants-rolled "dogman")))
 
-;; (deftest test-that-unknown-player-cant-roll-initiative
-;; (is (= true nil)))
+  (process-single-initiative "{\"playerId\":\"dogman\",\"diceRoll\":13}")
+  (is (= 13 (@combatants-rolled "dogman")))
+
+  (process-single-initiative "{\"playerId\":\"dogman\",\"diceRoll\":19}")
+  (is (= 13 (@combatants-rolled "dogman"))))
+
+(deftest test-that-unknown-player-cant-roll-initiative
+  (reset! combatants-received #{})
+
+  (initialize-received-combatants "{\"combatants\":[\"dogman\"]}")
+  (is (= nil (@combatants-rolled "dogman")))
+
+  (process-single-initiative "{\"playerId\":\"fartman\",\"diceRoll\":19}")
+  (is (= nil (@combatants-rolled "fartman"))))
 
 
 

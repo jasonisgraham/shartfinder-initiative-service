@@ -41,13 +41,18 @@
         ordered-combatants (reverse m)]
     (flatten (vals ordered-combatants))))
 
+(defn should-allow-combatant-roll? [combatant-id]
+  "returns true if combatant-id is in combatants-received & not in combatants-rolled"
+  (and (some #{combatant-id} @combatants-received)
+       (nil? (@combatants-rolled combatant-id))))
+
 (defn process-single-initiative [initiative-json-string]
   "Accepts json String with EncounterId, CombatantId, & DiceValue"
   (let [initiative-json (json/read-str initiative-json-string)
-        combatant-id (initiative-json (identifiers :combatant-id))
-        initiative (get-initiative combatant-id (initiative-json (identifiers :dice-roll)))]
-    ;; TODO im not actually verifying anything!
-    (swap! combatants-rolled assoc combatant-id initiative)))
+        combatant-id (initiative-json (identifiers :combatant-id))]
+    (when (should-allow-combatant-roll? combatant-id)
+      (let [initiative (get-initiative combatant-id (initiative-json (identifiers :dice-roll)))]
+        (swap! combatants-rolled assoc combatant-id initiative)))))
 
 (defn who-hasnt-rolled? []
   (set/difference @combatants-received (keys @combatants-rolled)))
@@ -63,15 +68,20 @@
       (wcar* (car/publish (channels :initiative-created) ordered-initiative-json)))))
 
 (defn initialize-received-combatants [combatant-json]
-  (reset! combatants-received (get-combatants-from-json (json/read-str combatant-json))))
+  (->> combatant-json
+       (json/read-str)
+       (get-combatants-from-json)
+       (set)
+       (reset! combatants-received)))
 
-;; (def listener
-;;   (car/with-new-pubsub-listener (:spec server-connection)
-;;     {(channels :encounter-created) (fn f1 [[type match content-json :as payload]]
-;;                                      (when (instance? String content-json)
-;;                                        (initialize-received-combatants content-json)))
-;;      (channels :initiative-rolled) (fn f2 [[type match content-json :as payload]]
-;;                                       (process-initiative-created content-json))}
-;;     (car/subscribe (channels :encounter-created))))
+(def listener
+  (car/with-new-pubsub-listener (:spec server-connection)
+    {(channels :encounter-created) (fn f1 [[type match content-json :as payload]]
+                                     (when (instance? String content-json)
+                                       (initialize-received-combatants content-json)))
+     (channels :initiative-rolled) (fn f2 [[type match content-json :as payload]]
+                                     (when (instance? String content-json)
+                                       (process-initiative-created content-json)))}
+    (car/subscribe (channels :encounter-created) (channels :initiative-rolled))))
 
 (defn -main [])
