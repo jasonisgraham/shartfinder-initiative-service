@@ -2,7 +2,6 @@
   (:require [taoensso.carmine :as car :refer (wcar)]
             [clojure.data.json :as json]
             [clojure.set :as set]
-            [shartfinder-initiative-service.dice-roller :as dice-roller]
             [shartfinder-initiative-service.combatant-service :as combatant-service]
             [shartfinder-initiative-service.utils :as initiative-utils])
   (:gen-class))
