@@ -80,3 +80,9 @@
                                      (when (instance? String content-json)
                                        (process-initiative-created content-json)))}
     (car/subscribe (channels :encounter-created) (channels :initiative-rolled))))
+
+(defn get-response []
+  (json/write-str {:combatants-received @combatants-received
+                   :combatants-rolled @combatants-rolled
+                   :ordered-initiative @ordered-initiative
+                   :who-hasnt-rolled (who-hasnt-rolled?)}))
