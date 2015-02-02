@@ -12,3 +12,5 @@
   :uberjar-name "shartfinder-initiative-service-standalone.jar"
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
+
+;; web: java $JVM_OPTS -cp target/shartfinder-initiative-service-standalone.jar clojure.main -m shartfinder-initiative-service.core
