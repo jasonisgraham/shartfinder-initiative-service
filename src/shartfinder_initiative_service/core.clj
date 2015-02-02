@@ -3,7 +3,9 @@
             [clojure.data.json :as json]
             [clojure.set :as set]
             [shartfinder-initiative-service.combatant-service :as combatant-service]
-            [shartfinder-initiative-service.utils :as initiative-utils])
+            [shartfinder-initiative-service.utils :as initiative-utils]
+            [org.httpkit.server :refer (run-server)]
+            [compojure.core :refer (defroutes GET)])
   (:gen-class))
 
 (def server-connection {:pool {}
@@ -21,8 +23,10 @@
 (defmacro wcar* [& body] `(car/wcar server-connection ~@body))
 
 ;; I'm using atoms b/c I don't know clojure very well don't know no better :(
-(def combatants-rolled (atom {}))
-(def combatants-received (atom #{}))
+(defonce combatants-rolled (atom {}))
+(defonce combatants-received (atom #{}))
+(defonce server (atom nil))
+(defonce ordered-initiative (atom nil))
 
 (defn get-combatants-from-json [content-json]
   "accepts gmCombatants, playerCombatants, combatants"
@@ -64,17 +68,13 @@
   (process-single-initiative content-json)
   (when (has-everyone-rolled?)
     (let [ordered-initiative-json (create-initiative @combatants-rolled)]
-      (println "reached quota, sending initiative json: " ordered-initiative-json)
+      (reset! ordered-initiative ordered-initiative-json)
       (wcar* (car/publish (channels :initiative-created) ordered-initiative-json)))))
 
 (defn initialize-received-combatants [combatant-json]
-  (->> combatant-json
-       (json/read-str)
-       (get-combatants-from-json)
-       (set)
-       (reset! combatants-received)))
+  (->> combatant-json (json/read-str) (get-combatants-from-json) (set) (reset! combatants-received)))
 
-(def listener
+(defonce listener
   (car/with-new-pubsub-listener (:spec server-connection)
     {(channels :encounter-created) (fn f1 [[type match content-json :as payload]]
                                      (when (instance? String content-json)
@@ -84,4 +84,16 @@
                                        (process-initiative-created content-json)))}
     (car/subscribe (channels :encounter-created) (channels :initiative-rolled))))
 
-(defn -main [])
+(defn stop-server []
+  (when-not (nil? @server)
+    (@server :timeout 100)
+    (reset! server nil)))
+
+(defroutes app
+  (GET "/" [] (json/write-str {:who-hasnt-rolled (who-hasnt-rolled?)
+                               :combatants-received @combatants-received
+                               :combatants-rolled @combatants-rolled
+                               :ordered-initiative @ordered-initiative})))
+
+(defn -main [& args]
+  (reset! server (run-server #'app {:port 5000})))
