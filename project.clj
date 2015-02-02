@@ -9,8 +9,7 @@
                  [org.clojure/data.json "0.2.5"]
                  [http-kit "2.1.16"]
                  [compojure "1.3.1"]]
-  :main shartfinder-initiative-service.web
+  :main ^{:skip-aot true} shartfinder-initiative-service.web
   :uberjar-name "shartfinder-initiative-service-standalone.jar"
-  :aot [shartfinder-initiative-service.web])
-
- 
+  ;; :aot [shartfinder-initiative-service.web]
+  )
