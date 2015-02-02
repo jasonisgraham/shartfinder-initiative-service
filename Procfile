@@ -1,1 +1,1 @@
-web: lein trampoline run -m shartfinder-initiative-service.web
+web: lein trampoline run -m shartfinder-initiative-service.web 

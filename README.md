@@ -1,10 +1,13 @@
 # shartfinder-initiative-service
 
-FIXME: description
+initiative service for shartfinder microservice geek lunch project
 
 ## Installation
 
-Download from http://example.com/FIXME.
+git clone https://github.com/jasonisgraham/shartfinder-initiative-service
+lein deps
+lein trampoline run
+http://localhost:$PORT ($PORT defaults to 5000)
 
 ## Usage
 
