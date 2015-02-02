@@ -8,9 +8,8 @@
                  [org.clojure/data.json "0.2.5"]
                  [http-kit "2.1.16"]
                  [compojure "1.3.1"]]
-  :main ^:skip-aot shartfinder-initiative-service.web
+  :main shartfinder-initiative-service.web
   :uberjar-name "shartfinder-initiative-service-standalone.jar"
-  :target-path "target/%s"
-  :profiles {:uberjar {:aot :all}})
+  :aot [shartfinder-initiative-service.web])
 
 ;; web: java $JVM_OPTS -cp target/shartfinder-initiative-service-standalone.jar clojure.main -m shartfinder-initiative-service.core
