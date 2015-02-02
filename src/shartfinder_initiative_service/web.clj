@@ -15,4 +15,4 @@
   (GET "/" [] (get-response)))
 
 (defn -main [& args]
-  (reset! server (run-server #'app {:port 5000})))
+  (reset! server (run-server #'app {:port 8080})))
