@@ -10,6 +10,4 @@
                  [http-kit "2.1.16"]
                  [compojure "1.3.1"]]
   :main ^{:skip-aot true} shartfinder-initiative-service.web
-  :uberjar-name "shartfinder-initiative-service-standalone.jar"
-  ;; :aot [shartfinder-initiative-service.web]
-  )
+  :uberjar-name "shartfinder-initiative-service-standalone.jar")

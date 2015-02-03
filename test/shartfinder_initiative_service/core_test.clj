@@ -4,6 +4,13 @@
             [shartfinder-initiative-service.core :refer :all]
             [shartfinder-initiative-service.combatant-service :as combatant-service]))
 
+;; (comment
+;;   efc4d149-41b9-4efd-8282-2b87146b3b21
+;;   4cd438e4-b686-4f80-a4e9-9ef21c096e77
+;;   d7411446-d1ba-45db-ab8f-16b3264c7dc0
+;;   d9d3bba1-d0f1-449e-8c7c-f038769deeca
+;;   )
+
 (defn my-test-fixture [f]
   (reset! combatants-rolled {})
   (reset! combatants-received #{})

@@ -27,10 +27,7 @@
 
 (defn get-combatants-from-json [content-json]
   "accepts gmCombatants, playerCombatants, combatants"
-  (concat
-   (content-json "gmCombatants")
-   (content-json "playerCombatants")
-   (content-json "combatants")))
+  (concat (content-json "gmCombatants") (content-json "playerCombatants") (content-json "combatants")))
 
 (defn get-initiative [combatant-id dice-roll]
   (+ dice-roll (combatant-service/get-initiative-bonus combatant-id)))
