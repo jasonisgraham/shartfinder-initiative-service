@@ -1,8 +1,7 @@
 (ns shartfinder-initiative-service.core-test
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
-            [shartfinder-initiative-service.core :refer :all]
-            [shartfinder-initiative-service.combatant-service :as combatant-service]))
+            [shartfinder-initiative-service.core :refer :all]))
 
 ;; (comment
 ;;   efc4d149-41b9-4efd-8282-2b87146b3b21
@@ -22,20 +21,23 @@
   (is (= 0 (count @combatants-rolled)))
   (is (= 0 (count @combatants-received))))
 
+(deftest test-that-combatant-service-can-be-hit
+  (is (not (nil? (get-initiative-bonus "dogman")))))
+
 (deftest test-get-correct-initiative
-  (with-redefs [combatant-service/get-initiative-bonus (fn [id] "25")]
-    (is (= "25" (combatant-service/get-initiative-bonus "dogman")))))
+  (with-redefs [get-initiative-bonus (fn [id] "25")]
+    (is (= "25" (get-initiative-bonus "dogman")))))
 
 (deftest test-get-initiative
-  (with-redefs [combatant-service/get-initiative-bonus (fn [id] -1)]
+  (with-redefs [get-initiative-bonus (fn [id] -1)]
     (is (= 17 (get-initiative "jason" 18))))
-  (with-redefs [combatant-service/get-initiative-bonus (fn [id] 2)]
+  (with-redefs [get-initiative-bonus (fn [id] 2)]
     (is (= 20 (get-initiative "jason" 18)))
     (is (= 9 (get-initiative "jason" 7)))))
 
 (deftest test-process-single-initiative
   (reset! combatants-received #{"jason" "dogman"})
-  (with-redefs [combatant-service/get-initiative-bonus (fn [id] -2)]
+  (with-redefs [get-initiative-bonus (fn [id] -2)]
     (let [char-1-json-string "{\"type\":\"RollInitiative\",\"id\":\"2b29f919-6574-4709-8afb-ca54c36fa4da\",\"playerId\":\"jason\",\"diceRoll\":13}"
           char-2-json-string "{\"type\":\"RollInitiative\",\"id\":\"2b29f919-6574-4709-8afb-ca54c36fa4da\",\"playerId\":\"dogman\",\"diceRoll\":9}"]
       (process-single-initiative char-1-json-string)
@@ -45,7 +47,7 @@
 
 (deftest test-process-single-combatant-one-roll-one-character
   (reset! combatants-received #{"jason"})
-  (with-redefs [combatant-service/get-initiative-bonus (fn [id] -2)]
+  (with-redefs [get-initiative-bonus (fn [id] -2)]
     (is (= {"jason" 11}
            (process-single-initiative
             "{\"type\":\"RollInitiative\",\"id\":\"2b29f919-6574-4709-8afb-ca54c36fa4da\",\"playerId\":\"jason\",\"diceRoll\":13}")))))
@@ -115,16 +117,17 @@
 
 (deftest test-that-only-first-roll-counts
   (reset! combatants-received #{})
+  (with-redefs [get-initiative-bonus (fn [id] 0)]
 
-  (initialize-received-combatants "{\"combatants\":[\"dogman\", \"fartman\"]}")
-  (is (= 2 (count @combatants-received)))
-  (is (= nil (@combatants-rolled "dogman")))
+    (initialize-received-combatants "{\"combatants\":[\"dogman\", \"fartman\"]}")
+    (is (= 2 (count @combatants-received)))
+    (is (= nil (@combatants-rolled "dogman")))
 
-  (process-single-initiative "{\"playerId\":\"dogman\",\"diceRoll\":13}")
-  (is (= 13 (@combatants-rolled "dogman")))
+    (process-single-initiative "{\"playerId\":\"dogman\",\"diceRoll\":13}")
+    (is (= 13 (@combatants-rolled "dogman")))
 
-  (process-single-initiative "{\"playerId\":\"dogman\",\"diceRoll\":19}")
-  (is (= 13 (@combatants-rolled "dogman"))))
+    (process-single-initiative "{\"playerId\":\"dogman\",\"diceRoll\":19}")
+    (is (= 13 (@combatants-rolled "dogman")))))
 
 (deftest test-that-unknown-player-cant-roll-initiative
   (reset! combatants-received #{})

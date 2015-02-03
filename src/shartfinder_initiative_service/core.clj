@@ -2,8 +2,8 @@
   (:require [taoensso.carmine :as car :refer (wcar)]
             [clojure.data.json :as json]
             [clojure.set :as set]
-            [shartfinder-initiative-service.combatant-service :as combatant-service]
-            [shartfinder-initiative-service.utils :as initiative-utils])
+            [shartfinder-initiative-service.utils :as initiative-utils]
+            [clj-http.client :as client])
   (:gen-class))
 
 (def server-connection {:pool {}
@@ -11,12 +11,15 @@
                                :port 18240
                                :password "abc123"}})
 
+(def ^:private service-urls {:combatant "https://secure-beach-3319.herokuapp.com/"})
+
 (def ^:private channels {:encounter-created "encounter-created"
                          :initiative-rolled "roll-initiative"
                          :initiative-created "initiative-created"})
 
 (def ^:private identifiers {:combatant-id "playerId"
-                            :dice-roll "diceRoll"})
+                            :dice-roll "diceRoll"
+                            :initiative-bonus "initiativeBonus"})
 
 (defmacro wcar* [& body] `(car/wcar server-connection ~@body))
 
@@ -29,8 +32,18 @@
   "accepts gmCombatants, playerCombatants, combatants"
   (concat (content-json "gmCombatants") (content-json "playerCombatants") (content-json "combatants")))
 
+(defn get-initiative-bonus [combatant-id]
+  (let [url (str (service-urls :combatant) "/initiative-bonus/id")
+        response (client/get url {:throw-exceptions false})]
+    (if (= (:status response) 200)
+      (->> (:initiative-bonus identifiers) ((json/read-str (:body r))) (Integer/parseInt))
+      ;; TODO probably better way to produce this
+      (wcar* (car/publish (channels :error) (json/write-str {:response (:status response)
+                                                             :url url}))))))
+
 (defn get-initiative [combatant-id dice-roll]
-  (+ dice-roll (combatant-service/get-initiative-bonus combatant-id)))
+  (let [initiative-bonus (get-initiative-bonus combatant-id)]
+    (+ dice-roll initiative-bonus)))
 
 (defn create-initiative [unordered-initiative-map]
   (let [combatants (keys unordered-initiative-map)
