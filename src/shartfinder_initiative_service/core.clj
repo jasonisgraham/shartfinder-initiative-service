@@ -15,7 +15,9 @@
 
 (def ^:private channels {:encounter-created "encounter-created"
                          :initiative-rolled "roll-initiative"
-                         :initiative-created "initiative-created"})
+                         :initiative-created "initiative-created"
+                         ;; TODO should this be an error only API gateway listens to??
+                         :error "error"})
 
 (def ^:private identifiers {:combatant-id "playerId"
                             :dice-roll "diceRoll"
@@ -39,7 +41,8 @@
       (->> (:initiative-bonus identifiers) ((json/read-str (:body r))) (Integer/parseInt))
       ;; TODO probably better way to produce this
       (wcar* (car/publish (channels :error) (json/write-str {:response (:status response)
-                                                             :url url}))))))
+                                                             :url url
+                                                             :source "initiative-service"}))))))
 
 (defn get-initiative [combatant-id dice-roll]
   (let [initiative-bonus (get-initiative-bonus combatant-id)]
