@@ -26,6 +26,7 @@
 (defmacro wcar* [& body] `(car/wcar server-connection ~@body))
 
 ;; I'm using atoms b/c I don't know clojure very well don't know no better :(
+;; I need to add something that allows these to be reset if nessy, or (better yet), just include encounter-id
 (defonce combatants-rolled (atom {}))
 (defonce combatants-received (atom #{}))
 (defonce ordered-initiative (atom nil))
@@ -38,7 +39,7 @@
   (let [url (str (service-urls :combatant) "/initiative-bonus/id")
         response (client/get url {:throw-exceptions false})]
     (if (= (:status response) 200)
-      (->> (:initiative-bonus identifiers) ((json/read-str (:body r))) (Integer/parseInt))
+      (->> (:initiative-bonus identifiers) ((json/read-str (:body response))) (Integer/parseInt))
       ;; TODO probably better way to produce this
       (wcar* (car/publish (channels :error) (json/write-str {:response (:status response)
                                                              :url url
@@ -79,7 +80,10 @@
   (when (has-everyone-rolled?)
     (let [ordered-initiative-json (create-initiative @combatants-rolled)]
       (reset! ordered-initiative ordered-initiative-json)
-      (wcar* (car/publish (channels :initiative-created) ordered-initiative-json)))))
+
+      (def publish-str (json/write-str @ordered-initiative))
+      (println "string published: " publish-str)
+      (wcar* (car/publish (channels :initiative-created) publish-str)))))
 
 (defn initialize-received-combatants [combatant-json]
   (->> combatant-json (json/read-str) (get-combatants-from-json) (set) (reset! combatants-received)))

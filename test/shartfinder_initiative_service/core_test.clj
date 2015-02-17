@@ -3,6 +3,7 @@
             [clojure.data.json :as json]
             [shartfinder-initiative-service.core :refer :all]))
 
+;;
 ;; (comment
 ;;   efc4d149-41b9-4efd-8282-2b87146b3b21
 ;;   4cd438e4-b686-4f80-a4e9-9ef21c096e77
@@ -137,8 +138,6 @@
 
   (process-single-initiative "{\"playerId\":\"fartman\",\"diceRoll\":19}")
   (is (= nil (@combatants-rolled "fartman"))))
-
-
 
 ;; (defn non-threaded []
 ;;   (let [a (+ 1 1)
