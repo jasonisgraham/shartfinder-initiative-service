@@ -23,13 +23,14 @@
                             :dice-roll "diceRoll"
                             :initiative-bonus "initiativeBonus"})
 
-(defmacro wcar* [& body] `(car/wcar server-connection ~@body))
+(defmacro wcar* [& body]
+  `(car/wcar server-connection ~@body))
 
-;; I'm using atoms b/c I don't know clojure very well don't know no better :(
 ;; I need to add something that allows these to be reset if nessy, or (better yet), just include encounter-id
 (defonce combatants-rolled (atom {}))
 (defonce combatants-received (atom #{}))
 (defonce ordered-initiative (atom nil))
+(defonce encounter-id (atom nil))
 
 (defn get-combatants-from-json [content-json]
   "accepts gmCombatants, playerCombatants, combatants"
@@ -77,16 +78,22 @@
 
 (defn process-initiative-created [content-json]
   (process-single-initiative content-json)
-  (when (has-everyone-rolled?)
-    (let [ordered-initiative-json (create-initiative @combatants-rolled)]
-      (reset! ordered-initiative ordered-initiative-json)
 
-      (def publish-str (json/write-str @ordered-initiative))
-      (println "string published: " publish-str)
-      (wcar* (car/publish (channels :initiative-created) publish-str)))))
+  (when (has-everyone-rolled?)
+    (let [ordered-combatant-ids (create-initiative @combatants-rolled)]
+      (reset! ordered-initiative {:encounterId @encounter-id, :orderedCombatantIds ordered-combatant-ids})
+      ;; returns the json payload (this will help with testing)
+      ;; I'm hoping there is a better way to test this redis stuff
+      (let [publish-str (json/write-str @ordered-initiative)]
+        (wcar* (car/publish (channels :initiative-created) publish-str))
+        publish-str))))
 
 (defn initialize-received-combatants [combatant-json]
+  (initialize-encounter-id combatant-json)
   (->> combatant-json (json/read-str) (get-combatants-from-json) (set) (reset! combatants-received)))
+
+(defn initialize-encounter-id [combatant-json]
+  (reset! encounter-id (-> combatant-json (json/read-str :key-fn keyword) (get :encounterId))))
 
 (defonce listener
   (car/with-new-pubsub-listener (:spec server-connection)

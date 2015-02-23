@@ -1,5 +1,6 @@
 (ns shartfinder-initiative-service.core-test
-  (:require [clojure.test :refer :all]
+  (:require [taoensso.carmine :as car :refer (wcar)]
+            [clojure.test :refer :all]
             [clojure.data.json :as json]
             [shartfinder-initiative-service.core :refer :all]))
 
@@ -87,13 +88,19 @@
     (is (= #{} (who-hasnt-rolled?)))))
 
 (deftest test-process-initiative-created
-  (reset! combatants-received #{"stankypants" "dogman" "someDude"})
+  (reset! combatants-received #{"stankyPants" "dogman" "someDude"})
+  (reset! encounter-id 69)
   (let [jason "{\"playerId\":\"jason\",\"diceRoll\":13}"
         goblin "{\"playerId\":\"goblin\",\"diceRoll\":20}"
-        dogman "{\"playerId\":\"dogman\",\"diceRoll\":9}"]
-    (process-initiative-created jason)
-    (process-initiative-created goblin)
-    (process-initiative-created dogman)))
+        dogman "{\"playerId\":\"dogman\",\"diceRoll\":9}"
+        stankyPants "{\"playerId\":\"stankyPants\",\"diceRoll\":4}"
+        someDude "{\"playerId\":\"someDude\",\"diceRoll\":8}"
+        expected "{\"encounterId\":69,\"orderedCombatantIds\":[\"dogman\",\"someDude\",\"stankyPants\"]}"]
+    (is (= nil (process-initiative-created jason)))
+    (is (= nil (process-initiative-created goblin)))
+    (is (= nil (process-initiative-created dogman)))
+    (is (= nil (process-initiative-created someDude)))
+    (is (= expected (process-initiative-created stankyPants)))))
 
 (deftest test-initialize-received-combatants
   (testing "only gmCombatants"
@@ -138,6 +145,15 @@
 
   (process-single-initiative "{\"playerId\":\"fartman\",\"diceRoll\":19}")
   (is (= nil (@combatants-rolled "fartman"))))
+
+(deftest test-encounter-id
+  (testing "is initially nil"
+    (is (nil? @encounter-id)))
+
+  (testing "can be defined"
+    (let [combatants-json "{\"encounterId\":69, \"gmCombatants\":[\"jason\"],\"playerCombatants\":[\"fartman\"], \"combatants\":[\"dogman\"]}"]
+      (initialize-received-combatants combatants-json)
+      (is (= 69 @encounter-id)))))
 
 ;; (defn non-threaded []
 ;;   (let [a (+ 1 1)
