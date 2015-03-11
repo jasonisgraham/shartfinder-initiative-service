@@ -19,9 +19,9 @@
                          ;; TODO should this be an error only API gateway listens to??
                          :error "error"})
 
-(def ^:private identifiers {:combatant-id "playerId"
-                            :dice-roll "diceRoll"
-                            :initiative-bonus "initiativeBonus"})
+(def ^:private identifiers {:combatant-id :playerId
+                            :dice-roll :diceRoll
+                            :initiative-bonus :initiativeBonus})
 
 (defmacro wcar* [& body]
   `(car/wcar server-connection ~@body))
@@ -32,15 +32,15 @@
 (defonce ordered-initiative (atom nil))
 (defonce encounter-id (atom nil))
 
-(defn get-combatants-from-json [content-json]
+(defn get-combatants-from-json [ content]
   "accepts gmCombatants, playerCombatants, combatants"
-  (concat (content-json "gmCombatants") (content-json "playerCombatants") (content-json "combatants")))
+  (concat (content :gmCombatants) (content :playerCombatants) (content :combatants)))
 
 (defn get-initiative-bonus [combatant-id]
   (let [url (str (service-urls :combatant) "/initiative-bonus/id")
         response (client/get url {:throw-exceptions false})]
     (if (= (:status response) 200)
-      (->> (:initiative-bonus identifiers) ((json/read-str (:body response))) (Integer/parseInt))
+      (->> (:initiative-bonus identifiers) ((json/read-str (:body response) :key-fn keyword)) (Integer/parseInt))
       ;; TODO probably better way to produce this
       (wcar* (car/publish (channels :error) (json/write-str {:response (:status response)
                                                              :url url
@@ -62,12 +62,11 @@
   (and (some #{combatant-id} @combatants-received)
        (nil? (@combatants-rolled combatant-id))))
 
-(defn process-single-initiative [initiative-json-string]
+(defn process-single-initiative [initiative]
   "Accepts json String with EncounterId, CombatantId, & DiceValue"
-  (let [initiative-json (json/read-str initiative-json-string)
-        combatant-id (initiative-json (identifiers :combatant-id))]
+  (let [combatant-id ((identifiers :combatant-id) initiative)]
     (when (should-allow-combatant-roll? combatant-id)
-      (let [initiative (get-initiative combatant-id (initiative-json (identifiers :dice-roll)))]
+      (let [initiative (get-initiative combatant-id (initiative (identifiers :dice-roll)))]
         (swap! combatants-rolled assoc combatant-id initiative)))))
 
 (defn who-hasnt-rolled? []
@@ -76,8 +75,8 @@
 (defn- has-everyone-rolled? []
   (>= (count @combatants-rolled) (count @combatants-received)))
 
-(defn process-initiative-created [content-json]
-  (process-single-initiative content-json)
+(defn process-initiative-created [ content-json]
+  (process-single-initiative  content-json)
 
   (when (has-everyone-rolled?)
     (let [ordered-combatant-ids (create-initiative @combatants-rolled)]
@@ -88,21 +87,21 @@
         (wcar* (car/publish (channels :initiative-created) publish-str))
         publish-str))))
 
+(defn initialize-encounter-id [combatant-json]
+  (reset! encounter-id (-> combatant-json (get :encounterId))))
+
 (defn initialize-received-combatants [combatant-json]
   (initialize-encounter-id combatant-json)
-  (->> combatant-json (json/read-str) (get-combatants-from-json) (set) (reset! combatants-received)))
-
-(defn initialize-encounter-id [combatant-json]
-  (reset! encounter-id (-> combatant-json (json/read-str :key-fn keyword) (get :encounterId))))
+  (->> combatant-json  (get-combatants-from-json) (set) (reset! combatants-received)))
 
 (defonce listener
   (car/with-new-pubsub-listener (:spec server-connection)
-    {(channels :encounter-created) (fn f1 [[type match content-json :as payload]]
-                                     (when (instance? String content-json)
-                                       (initialize-received-combatants content-json)))
-     (channels :initiative-rolled) (fn f2 [[type match content-json :as payload]]
-                                     (when (instance? String content-json)
-                                       (process-initiative-created content-json)))}
+    {(channels :encounter-created) (fn f1 [[type match  content-json :as payload]]
+                                     (when (instance? String  content-json)
+                                       (initialize-received-combatants  content-json)))
+     (channels :initiative-rolled) (fn f2 [[type match  content-json :as payload]]
+                                     (when (instance? String  content-json)
+                                       (process-initiative-created (json/read-str content-json))))}
     (car/subscribe (channels :encounter-created) (channels :initiative-rolled))))
 
 (defn get-response []
