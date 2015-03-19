@@ -11,3 +11,11 @@
                          (compare [(get unsorted-map key2) key2]
                                   [(get unsorted-map key1) key1])))
         unsorted-map))
+
+(defn to-number [number-or-string]
+  (if-not (or (nil? number-or-string)
+              (and (string? number-or-string)
+                   (= "" number-or-string)))
+    (if (number? number-or-string)
+      number-or-string
+      (read-string number-or-string))))

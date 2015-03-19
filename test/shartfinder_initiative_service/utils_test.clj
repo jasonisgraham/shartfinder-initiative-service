@@ -12,3 +12,13 @@
         (is (= "jason" (nth actual 0)))
         (is (= "dogman" (nth actual 1)))
         (is (= #{"apple" "goblin"} (set (take-last 2 actual))))))))
+
+(deftest test-string-to-number
+  (testing "expecting numbers"
+    (let [exp 3]
+      (is (= exp (to-number 3)))
+      (is (= exp (to-number "3")))))
+
+  (testing "expecting nil"
+    (is (= nil (to-number nil)))
+    (is (= nil (to-number "")))))

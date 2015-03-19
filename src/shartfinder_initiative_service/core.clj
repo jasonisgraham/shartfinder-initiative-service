@@ -38,7 +38,7 @@
 
 (defn get-initiative-value [combatant-info]
   (let [initiative-bonus (get-initiative-bonus combatant-info)]
-    (+ (:diceRoll combatant-info) initiative-bonus)))
+    (+ (initiative-utils/to-number (:diceRoll combatant-info)) initiative-bonus)))
 
 (defn create-initiative [unordered-combatants]
   (let [combatants (keys unordered-combatants)
@@ -55,25 +55,30 @@
 
 (defn should-allow-combatant-roll? [combatant]
   "returns true if combatant-name is in combatants-received & not in combatants-rolled"
-  (and (is-combatant-in-combatants-received? combatant) (not (has-combatant-rolled? combatant))))
+  (and (is-combatant-in-combatants-received? combatant)
+       (not (has-combatant-rolled? combatant))))
 
 (defn process-single-initiative [combatant-info]
   "If combatant roll is accepted, update @combatants-rolled"
   (let [combatant-name (:combatantName combatant-info)]
     (when (should-allow-combatant-roll? combatant-info)
       (let [initiative-value (get-initiative-value combatant-info)]
-        (swap! combatants-rolled assoc (:combatantName combatant-info) (assoc combatant-info :initiative initiative-value))))))
+        (swap! combatants-rolled assoc
+               (:combatantName combatant-info)
+               (assoc combatant-info :initiative initiative-value))))))
 
 (defn who-hasnt-rolled? []
-  (set/difference (set (keys @combatants-received)) (set (keys @combatants-rolled))))
+  (set/difference (set (keys @combatants-received))
+                  (set (keys @combatants-rolled))))
 
 (defn- has-everyone-rolled? []
   (>= (count @combatants-rolled) (count @combatants-received)))
 
 (defn process-initiative-created [combatant-info]
   "process initiative roll, then if everyone has rolled, order initiative then publish"
-  (process-single-initiative combatant-info)
-
+  (println "combatant-info: " combatant-info)
+  (process-single-initiative (update-in combatant-info [:diceRoll] initiative-utils/to-number))
+  (println "combatants: " @combatants-rolled)
   (when (has-everyone-rolled?)
     (let [ordered-combatants (create-initiative @combatants-rolled)]
       (reset! ordered-initiative {:encounterId @encounter-id, :orderedCombatants ordered-combatants})
@@ -94,11 +99,14 @@
                                      (when (instance? String  content-json)
                                        (initialize-received-combatants (json/read-str content-json :key-fn keyword))))
      (channels :initiative-rolled) (fn f2 [[type match  content-json :as payload]]
+                                     (println "init rolled")
+                                     (println "content-json: " content-json)
                                      (when (instance? String  content-json)
                                        (process-initiative-created (json/read-str content-json :key-fn keyword))))}
     (car/subscribe (channels :encounter-created) (channels :initiative-rolled))))
 
 (defn get-response []
+  (println "here")
   (json/write-str {:combatants-received @combatants-received
                    :combatants-rolled @combatants-rolled
                    :ordered-initiative @ordered-initiative

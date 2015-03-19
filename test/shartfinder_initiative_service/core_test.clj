@@ -63,12 +63,21 @@
     (is (= 25 (get-initiative-bonus (create-mean-mouth))))))
 
 (deftest test-get-initiative
-  (with-redefs [get-initiative-bonus (fn [id] -1)]
-    (is (= 17 (get-initiative-value (create-silver-noun 18)))))
+  (testing "numeric dice roll"
+    (with-redefs [get-initiative-bonus (fn [id] -1)]
+      (is (= 17 (get-initiative-value (create-silver-noun 18)))))
 
-  (with-redefs [get-initiative-bonus (fn [id] 2)]
-    (is (= 20 (get-initiative-value (create-silver-noun 18))))
-    (is (= 9 (get-initiative-value (create-silver-noun 7))))))
+    (with-redefs [get-initiative-bonus (fn [id] 2)]
+      (is (= 20 (get-initiative-value (create-silver-noun 18))))
+      (is (= 9 (get-initiative-value (create-silver-noun 7))))))
+
+  (testing "string dice roll"
+    (with-redefs [get-initiative-bonus (fn [id] -1)]
+      (is (= 17 (get-initiative-value (create-silver-noun (str 18))))))
+
+    (with-redefs [get-initiative-bonus (fn [id] 2)]
+      (is (= 20 (get-initiative-value (create-silver-noun (str 18)))))
+      (is (= 9 (get-initiative-value (create-silver-noun (str 7))))))))
 
 (deftest test-process-single-initiative
   (initialize-received-combatants {:encounterId 69,
@@ -96,6 +105,7 @@
     (is (= 7 (:diceRoll mean-mouth-actual)))))
 
 ;; (deftest test-process-single-combatant-one-roll-one-character
+;;   (is true)
 ;;   )
 
 (deftest test-should-allow-combatant-roll?
