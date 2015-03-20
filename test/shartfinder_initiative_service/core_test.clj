@@ -229,14 +229,30 @@
         (is (= expected (process-initiative-created stankypants)))))))
 
 (deftest test-initialize-received-combatants
-  (let [encounter-created-payload {:encounterId 69,
-                                   :combatants [{:userId "jim", :combatantName "DTL Boss"},
-                                                {:userId "boolnerbroni", :combatantName "Grook"}] }]
-    (reset-atoms!)
-    (initialize-received-combatants encounter-created-payload)
-    (is (= {"DTL Boss" {:userId "jim", :combatantName "DTL Boss"}
-            "Grook"    {:userId "boolnerbroni", :combatantName "Grook"}} @combatants-received))
-    (is (= 69 @encounter-id))))
+  (testing "with raw-string"
+    (let [encounter-created-payload {:encounterId 69, :combatants [{:dogman {:maxHP "4", :combatantName "dogman", :user "Jim"}}]}]
+
+      ))
+
+  (testing "with non-empty userId"
+    (let [encounter-created-payload {:encounterId 69,
+                                     :combatants [{:userId "jim", :combatantName "DTL Boss"},
+                                                  {:userId "boolnerbroni", :combatantName "Grook"}] }]
+      (reset-atoms!)
+      (initialize-received-combatants encounter-created-payload)
+      (is (= {"DTL Boss" {:userId "jim", :combatantName "DTL Boss"}
+              "Grook"    {:userId "boolnerbroni", :combatantName "Grook"}} @combatants-received))
+      (is (= 69 @encounter-id))))
+
+  (testing "with empty userId"
+    (let [encounter-created-payload {:encounterId 69,
+                                     :combatants [{:userId nil, :combatantName "DTL Boss"},
+                                                  {:userId nil, :combatantName "Grook"}] }]
+      (reset-atoms!)
+      (initialize-received-combatants encounter-created-payload)
+      (is (= {"DTL Boss" {:userId nil, :combatantName "DTL Boss"}
+              "Grook"    {:userId nil, :combatantName "Grook"}} @combatants-received))
+      (is (= 69 @encounter-id)))))
 
 
 (deftest test-that-only-first-roll-counts
@@ -287,3 +303,11 @@
       (wcar* (car/publish "encounter-created" (json/write-str encounter-created-payload)))
       (Thread/sleep 500)
       (is (= 2 (count @combatants-received))))))
+
+
+;; (deftest test-messages-are-published-correctly
+;;   (testing "on initiative roll, success message is published"
+
+
+
+;;     ))

@@ -15,6 +15,7 @@
 
 (def ^:private channels {:encounter-created "encounter-created"
                          :initiative-rolled "roll-initiative"
+                         :initiative-rolled-success "roll-initiative-success"
                          :initiative-created "initiative-created"
                          ;; TODO should this be an error only API gateway listens to??
                          :error "error"})
@@ -61,11 +62,19 @@
 (defn process-single-initiative [combatant-info]
   "If combatant roll is accepted, update @combatants-rolled"
   (let [combatant-name (:combatantName combatant-info)]
+    (println "combatant-name: " combatant-name)
+    (println "should-allow-combatant-roll: " (should-allow-combatant-roll? combatant-info))
     (when (should-allow-combatant-roll? combatant-info)
-      (let [initiative-value (get-initiative-value combatant-info)]
-        (swap! combatants-rolled assoc
-               (:combatantName combatant-info)
-               (assoc combatant-info :initiative initiative-value))))))
+      (let [initiative-value (get-initiative-value combatant-info)
+            combatant-info (assoc combatant-info :initiative initiative-value)]
+        (println "initiative-value: " initiative-value)
+        (println "combatant-info: " combatant-info)
+        (println "combatants-rolled: " combatants-rolled)
+        (swap! combatants-rolled assoc (:combatantName combatant-info) combatant-info)
+        (println "combatants-rolled: " combatants-rolled)
+        (wcar* (car/publish (:initiative-rolled-success channels)
+                            (json/write-str combatant-info)))
+        combatant-info))))
 
 (defn who-hasnt-rolled? []
   (set/difference (set (keys @combatants-received))
@@ -77,7 +86,7 @@
 (defn process-initiative-created [combatant-info]
   "process initiative roll, then if everyone has rolled, order initiative then publish"
   (println "combatant-info: " combatant-info)
-  (process-single-initiative (update-in combatant-info [:diceRoll] initiative-utils/to-number))
+  (process-single-initiative (update-en combatant-info [:diceRoll] initiative-utils/to-number))
   (println "combatants: " @combatants-rolled)
   (when (has-everyone-rolled?)
     (let [ordered-combatants (create-initiative @combatants-rolled)]
@@ -85,8 +94,7 @@
       ;; returns the json payload (this will help with testing) I'm hoping there is a better way to test this redis stuff
       (let [publish-str (json/write-str @ordered-initiative)]
         (wcar* (car/publish (channels :initiative-created) publish-str))
-        publish-str)))
-  )
+        publish-str))))
 
 (defn initialize-received-combatants [combatants-info]
   "TODO what's the better way to do this?"
@@ -97,6 +105,7 @@
   (car/with-new-pubsub-listener (:spec server-connection)
     {(channels :encounter-created) (fn f1 [[type match  content-json :as payload]]
                                      (when (instance? String  content-json)
+                                       (println "content-json: " content-json)
                                        (initialize-received-combatants (json/read-str content-json :key-fn keyword))))
      (channels :initiative-rolled) (fn f2 [[type match  content-json :as payload]]
                                      (println "init rolled")
