@@ -86,7 +86,7 @@
 (defn process-initiative-created [combatant-info]
   "process initiative roll, then if everyone has rolled, order initiative then publish"
   (println "combatant-info: " combatant-info)
-  (process-single-initiative (update-en combatant-info [:diceRoll] initiative-utils/to-number))
+  (process-single-initiative (update-in combatant-info [:diceRoll] initiative-utils/to-number))
   (println "combatants: " @combatants-rolled)
   (when (has-everyone-rolled?)
     (let [ordered-combatants (create-initiative @combatants-rolled)]
@@ -99,6 +99,8 @@
 (defn initialize-received-combatants [combatants-info]
   "TODO what's the better way to do this?"
   (reset! encounter-id (combatants-info :encounterId))
+  (reset! combatants-rolled {})
+  (reset! ordered-initiative [])
   (reset! combatants-received (into {} (map #(assoc {} (:combatantName %) %) (:combatants combatants-info)))))
 
 (defonce listener
