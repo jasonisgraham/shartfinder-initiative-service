@@ -275,9 +275,6 @@
       (process-single-initiative {:userId "dogman", :combatantName "SilverNoun", :diceRoll 19})
       (is (= 13 (:initiative (@combatants-rolled "SilverNoun")))))))
 
-;; (deftest test-that-unknown-player-cant-roll-initiative
-;;   (reset-atoms!))
-
 (deftest test-encounter-id
   (reset-atoms!)
   (testing "is initially nil"
@@ -303,11 +300,3 @@
       (wcar* (car/publish "encounter-created" (json/write-str encounter-created-payload)))
       (Thread/sleep 500)
       (is (= 2 (count @combatants-received))))))
-
-
-;; (deftest test-messages-are-published-correctly
-;;   (testing "on initiative roll, success message is published"
-
-
-
-;;     ))

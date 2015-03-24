@@ -14,10 +14,10 @@
 (def ^:private service-urls {:combatant "https://secure-beach-3319.herokuapp.com/"})
 
 (def ^:private channels {:encounter-created "encounter-created"
-                         :initiative-rolled "roll-initiative"
-                         :initiative-rolled-success "roll-initiative-success"
+                         :roll-initiative-command "roll-initiative-command"
+                         :initiative-rolled "initiative-rolled"
+
                          :initiative-created "initiative-created"
-                         ;; TODO should this be an error only API gateway listens to??
                          :error "error"})
 
 (defmacro wcar* [& body]
@@ -33,9 +33,10 @@
         response (client/get url {:throw-exceptions false})]
     (if (= (:status response) 200)
       (->> :initiativeBonus ((json/read-str (:body response) :key-fn keyword)) (Integer/parseInt))
-      (wcar* (car/publish (channels :error) (json/write-str {:response (:status response)
-                                                             :url url
-                                                             :source "initiative-service"}))))))
+      (wcar* (car/publish (:error channels)
+                          (json/write-str {:response (:status response)
+                                           :url url
+                                           :source "initiative-service"}))))))
 
 (defn get-initiative-value [combatant-info]
   (let [initiative-bonus (get-initiative-bonus combatant-info)]
@@ -62,17 +63,12 @@
 (defn process-single-initiative [combatant-info]
   "If combatant roll is accepted, update @combatants-rolled"
   (let [combatant-name (:combatantName combatant-info)]
-    (println "combatant-name: " combatant-name)
-    (println "should-allow-combatant-roll: " (should-allow-combatant-roll? combatant-info))
     (when (should-allow-combatant-roll? combatant-info)
       (let [initiative-value (get-initiative-value combatant-info)
             combatant-info (assoc combatant-info :initiative initiative-value)]
-        (println "initiative-value: " initiative-value)
-        (println "combatant-info: " combatant-info)
-        (println "combatants-rolled: " combatants-rolled)
         (swap! combatants-rolled assoc (:combatantName combatant-info) combatant-info)
         (println "combatants-rolled: " combatants-rolled)
-        (wcar* (car/publish (:initiative-rolled-success channels)
+        (wcar* (car/publish (:initiative-rolled channels)
                             (json/write-str combatant-info)))
         combatant-info))))
 
@@ -81,23 +77,20 @@
                   (set (keys @combatants-rolled))))
 
 (defn- has-everyone-rolled? []
-  (>= (count @combatants-rolled) (count @combatants-received)))
+  (>= (count @combatants-rolled)
+      (count @combatants-received)))
 
 (defn process-initiative-created [combatant-info]
   "process initiative roll, then if everyone has rolled, order initiative then publish"
-  (println "combatant-info: " combatant-info)
   (process-single-initiative (update-in combatant-info [:diceRoll] initiative-utils/to-number))
-  (println "combatants: " @combatants-rolled)
   (when (has-everyone-rolled?)
     (let [ordered-combatants (create-initiative @combatants-rolled)]
       (reset! ordered-initiative {:encounterId @encounter-id, :orderedCombatants ordered-combatants})
-      ;; returns the json payload (this will help with testing) I'm hoping there is a better way to test this redis stuff
       (let [publish-str (json/write-str @ordered-initiative)]
         (wcar* (car/publish (channels :initiative-created) publish-str))
         publish-str))))
 
 (defn initialize-received-combatants [combatants-info]
-  "TODO what's the better way to do this?"
   (reset! encounter-id (combatants-info :encounterId))
   (reset! combatants-rolled {})
   (reset! ordered-initiative [])
@@ -105,19 +98,19 @@
 
 (defonce listener
   (car/with-new-pubsub-listener (:spec server-connection)
-    {(channels :encounter-created) (fn f1 [[type match  content-json :as payload]]
+    {(:encounter-created channels) (fn f1 [[type match  content-json :as payload]]
                                      (when (instance? String  content-json)
                                        (println "content-json: " content-json)
                                        (initialize-received-combatants (json/read-str content-json :key-fn keyword))))
-     (channels :initiative-rolled) (fn f2 [[type match  content-json :as payload]]
-                                     (println "init rolled")
-                                     (println "content-json: " content-json)
-                                     (when (instance? String  content-json)
-                                       (process-initiative-created (json/read-str content-json :key-fn keyword))))}
-    (car/subscribe (channels :encounter-created) (channels :initiative-rolled))))
+     (:roll-initiative-command channels) (fn f2 [[type match  content-json :as payload]]
+                                           (println "init rolled")
+                                           (println "content-json: " content-json)
+                                           (when (instance? String  content-json)
+                                             (process-initiative-created (json/read-str content-json :key-fn keyword))))}
+    (car/subscribe (:encounter-created channels)
+                   (:roll-initiative-command channels))))
 
 (defn get-response []
-  (println "here")
   (json/write-str {:combatants-received @combatants-received
                    :combatants-rolled @combatants-rolled
                    :ordered-initiative @ordered-initiative

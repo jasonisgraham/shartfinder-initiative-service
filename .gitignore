@@ -11,3 +11,4 @@ pom.xml.asc
 .hg/
 notes.org
 #*
+/src/shartfinder_initiative_service/#core.clj#
