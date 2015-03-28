@@ -1,0 +1,12 @@
+{:database  {:subprotocol "postgresql"
+             :subname (str "//" (System/getenv "DB_HOSTNAME")
+                           ":" (System/getenv "DB_PORT")
+                           "/" (System/getenv "DB_NAME"))
+             :user (System/getenv "DB_USER")
+             :password (System/getenv "DB_PASS")}
+
+ :redis	{:spec {:host (System/getenv "REDIS_HOST")
+                :port (read-string (System/getenv "REDIS_PORT"))
+                :password (System/getenv "REDIS_PASS")}}
+
+ :service-urls {:combatant (System/getenv "SERVICE_URL_COMABATANT")}}
