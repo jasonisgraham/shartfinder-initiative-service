@@ -15,4 +15,6 @@
   (GET "/" [] (get-response)))
 
 (defn -main [& args]
-  (reset! server (run-server #'app {:port (Integer/parseInt (or (System/getenv "PORT") "5000"))})))
+  (let [port (Integer/parseInt (or (System/getenv "PORT") "5000"))]
+    (prn "port: " port)
+    (reset! server (run-server #'app {:port port}))))

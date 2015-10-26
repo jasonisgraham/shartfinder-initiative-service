@@ -16,4 +16,8 @@
 
   :main ^{:skip-aot true} shartfinder-initiative-service.web
 
-  :uberjar-name "shartfinder-initiative-service-standalone.jar")
+  :uberjar-name "shartfinder-initiative-service-standalone.jar"
+
+  :profiles {:uberjar {:aot :all}}
+
+  :auto-clean false)
